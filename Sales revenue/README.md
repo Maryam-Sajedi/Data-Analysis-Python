@@ -69,5 +69,10 @@ plt.tight_layout()
 plt.show()
 ```
 
+### Results
+
+![Visualisation of Sale revenue by product category](Total_revenue_by_product_category.png)
+*Bar graph visualizing the revenue sales for 4 product categories.*
+
 
 
