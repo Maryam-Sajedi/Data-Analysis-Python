@@ -1,4 +1,4 @@
-\# The Questions
+# The Questions
 
 Below are the questions I want to answer in my project:
 
@@ -14,7 +14,7 @@ Below are the questions I want to answer in my project:
 
 
 
-\# Tools I used in this project:
+# Tools I used in this project:
 
 
 
@@ -22,12 +22,12 @@ Below are the questions I want to answer in my project:
 * Pandas: Used for analysing  data. Giving me a tool to work with tabular data.
 * matplotlib: for visualizing data
 * NumPy: A very fast mat library to work with arrays.
-* Git \& GitHub: Essential for version control and sharing my Python code and analysis, ensuring collaboration and project tracking.
+* Git & GitHub: Essential for version control and sharing my Python code and analysis, ensuring collaboration and project tracking.
 * Jupyter Notebooks: The tool I used to run my Python scripts which let me easily include my notes and analysis.
 
 
 
-\# Importing libraries: 
+# Importing libraries: 
 
 
 
@@ -47,24 +47,24 @@ import matplotlib.pyplot as plt
 
 
 
-\# Visualizing Data:
+# Visualizing Data:
 
 
 
 ```python
 fig, ax = plt.subplots(figsize=(8, 5))
 
-ax.bar(category\_revenue.index, category\_revenue.values, color=\['steelblue', '#dd8452', '#55a868', '#c44e52'])
+ax.bar(category_revenue.index, category_revenue.values, color=['steelblue', '#dd8452', '#55a868', '#c44e52'])
 
-ax.set\_xlabel('Product Category')
+ax.set_xlabel('Product Category')
 
-ax.set\_ylabel('Total Revenue (£)')
+ax.set_ylabel('Total Revenue (£)')
 
-ax.set\_title('Total Revenue by Product Category (2024)')
+ax.set_title('Total Revenue by Product Category (2024)')
 
-ax.yaxis.set\_major\_formatter(plt.FuncFormatter(lambda x, \_: f'£{x:,.0f}'))
+ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f'£{x:,.0f}'))
 
-plt.tight\_layout()
+plt.tight_layout()
 
 plt.show()
 ```
