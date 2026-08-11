@@ -1,0 +1,17 @@
+# Byte-compiled / cache files
+__pycache__/
+*.pyc
+
+# The CSV is generated automatically each time the script runs -
+# no need to track it in version control
+messy_members.csv
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Editor / OS junk
+.DS_Store
+.vscode/
+.idea/
