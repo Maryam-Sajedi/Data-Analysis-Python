@@ -2,7 +2,7 @@
 
 ## What this is
 
-This is a Python port of an Igor Pro procedure file used at HZB to
+This is a Python port from igor pro to python:
 simulate a **Rashba-split electronic band** the way it would appear in
 an ARPES (angle-resolved photoemission spectroscopy) measurement, and
 to inspect it two ways: as a **waterfall plot of EDCs** (Energy
