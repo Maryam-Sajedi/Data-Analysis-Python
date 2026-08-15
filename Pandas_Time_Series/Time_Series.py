@@ -8,6 +8,7 @@ Goals: Learning Pandas Time Series and:
     How to select a month or a date range by writing it as a string
     How to change the frequency of data with resample() — daily to monthly, and so on
     How to smooth a noisy series with rolling(), and measure change with shift() and pct_change()
+    
 ======================================
 Example 1:
 Building a year of daily sales:
