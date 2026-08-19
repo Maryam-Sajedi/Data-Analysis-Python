@@ -9,8 +9,10 @@ functools.lru_cache (LRU = Least Recently Used) does this automatically. It is a
 import functools
 import time
 
+
 #Fibonacci calculation:
 # Without caching -- recomputes everything every call
+
 def fib_slow(n):
     if n < 0:
         return 0
@@ -20,6 +22,7 @@ def fib_slow(n):
 
 
 # With lru_cache -- results are stored after first computation
+
 @functools.lru_cache(maxsize=None)
 def fib_fast(n):
     if n <= 1:
@@ -31,13 +34,14 @@ def fib_fast(n):
 start = time.perf_counter()
 result_slow = fib_slow(35)
 elapsed_slow = time.perf_counter() - start
-print(f"fib_slow(35) = {result_slow}  ({elapsed_slow:.6f} s)")
+print(f"fib_slow(35) = {result_slow} ({elapsed_slow:.6f} s)")
 
 # Fast version -- nearly instant even for large n
 start = time.perf_counter()
 result_fast = fib_fast(35)
 elapsed_fast = time.perf_counter() - start
-print(f"fib_fast(35) = {result_fast}  ({elapsed_fast:.6f} s)")
+print(f"fib_fast(35) = {result_fast} ({elapsed_fast:.6f} s)")
+
 
 # Try a much larger value -- still instant
 print(f"fib_fast(200) = {fib_fast(200)}")
