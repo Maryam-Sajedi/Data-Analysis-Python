@@ -29,6 +29,18 @@ def fib_fast(n):
         return 1
     return fib_fast(n - 1) + fib_fast(n - 2)
 
+cach_dict = {}
+def fib_cached(n):
+    if n < 0:
+        return 0
+    if n <= 1:
+        return 1
+    if n in cach_dict.keys():
+        return cach_dict[n]
+    cach_dict[n] = fib_cached(n - 1) + fib_cached(n - 2)
+    return cach_dict[n] 
+
+
 
 # Slow version -- only test up to 35 to keep it bearable
 start = time.perf_counter()
