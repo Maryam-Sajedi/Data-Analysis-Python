@@ -11,7 +11,7 @@ import time
 
 
 #Fibonacci calculation:
-# Without caching -- recomputes everything every call
+# Without caching -- recomputes everything every call.
 
 def fib_slow(n):
     if n < 0:
