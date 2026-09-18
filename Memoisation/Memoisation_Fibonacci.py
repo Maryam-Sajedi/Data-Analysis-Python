@@ -29,6 +29,7 @@ def fib_fast(n):
         return 1
     return fib_fast(n - 1) + fib_fast(n - 2)
 
+# With manual caching -- results are stored after first computation:
 cach_dict = {}
 def fib_cached(n):
     if n < 0:
