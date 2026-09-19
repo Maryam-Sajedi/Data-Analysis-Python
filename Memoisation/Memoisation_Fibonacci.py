@@ -61,3 +61,10 @@ print(f"fib_fast(200) = {fib_fast(200)}")
 
 # See cache statistics
 print(f"Cache info: {fib_fast.cache_info()}")
+
+
+# Manual caching version:
+start = time.perf_counter()
+result_cached = fib_cached(35)
+elapsed_cached = time.perf_counter() - start
+print(f"fib_cached(35) = {result_cached} ({elapsed_cached:.6f} s)")
