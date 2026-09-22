@@ -1,0 +1,146 @@
+"""Predict Cookie Monster's weight on its birthday (in 2 weeks).
+
+The deterministic rules are gone, so we treat everything as uncertain and run a
+Monte Carlo simulation. The stated rules become *priors*, and the 3 observed
+days update them.
+
+Model
+-----
+1. Weight gain:  gain = beta * cookies_eaten + noise
+   - Prior: beta ~ N(0.5, 0.2^2)   ("10 kg eaten -> 5 kg fatter")
+   - Posterior from the observed days (Bayesian linear regression, no intercept).
+   - Noise sigma is estimated from the residuals and sampled per simulation.
+
+2. Grandma's mood (good if likes > dislikes):
+   - likes:    sunny and < 28 C,  takes tram 1 (tram 1 working)
+   - dislikes: neighbour looking out of the window,  takes tram 3 (tram 1 down)
+   Working it through: she is only ever in a good mood if tram 1 works, and
+   then unless (not sunny-and-mild AND neighbour is looking).
+       P(good) = p_tram * (1 - (1 - p_sunny) * p_neighbour)
+   p_tram and p_neighbour get Beta posteriors from the observed days; p_sunny is
+   then calibrated so that P(good) matches "3 good days a week on average".
+
+3. Grandma visits on good-mood days, at most twice per week, bringing 15 kg.
+
+4. Cookies eaten per day: 10 kg + 15 kg if Grandma visits, plus noise.
+"""
+
+import argparse
+
+import numpy as np
+
+# Observed data: each key is a column, its list holds the values for days 1, 2, 3.
+OBSERVATIONS = {
+    "day": [1, 2, 3],
+    "cookies_eaten": [15, 10, 40],
+    "neighbour_looking": [1, 0, 1],
+    "temperature": [25, 23, 29],
+    "tram_1_working": [1, 0, 1],
+    "lake_temperature": [15, 15.5, 15.3],
+    "evgeny_teaching": [1, 0, 1],
+    "weight_start": [100.0, 114.3, 120.7],
+    "weight_end": [114.3, 120.7, 135.4],
+}
+
+BASE_COOKIES_PER_DAY = 10.0
+GRANDMA_COOKIES = 15.0
+MAX_VISITS_PER_WEEK = 2
+GOOD_MOOD_DAYS_PER_WEEK = 3.0
+
+PRIOR_BETA_MEAN = 0.5
+PRIOR_BETA_SD = 0.2
+
+
+def fit_gain_model():
+    """Posterior for beta (kg gained per kg eaten) and the residual noise scale."""
+    cookies = np.array(OBSERVATIONS["cookies_eaten"], dtype=float)
+    gains = np.array(OBSERVATIONS["weight_end"]) - np.array(OBSERVATIONS["weight_start"])
+
+    # Estimate noise with the prior-mean rule, then do a conjugate normal update.
+    sigma = np.sqrt(np.mean((gains - PRIOR_BETA_MEAN * cookies) ** 2))
+    prior_prec = 1 / PRIOR_BETA_SD**2
+    data_prec = np.sum(cookies**2) / sigma**2
+    post_var = 1 / (prior_prec + data_prec)
+    post_mean = post_var * (prior_prec * PRIOR_BETA_MEAN + np.sum(cookies * gains) / sigma**2)
+    return post_mean, np.sqrt(post_var), sigma, len(gains)
+
+
+def mood_counts():
+    n = len(OBSERVATIONS["day"])
+    tram = sum(OBSERVATIONS["tram_1_working"])
+    neighbour = sum(OBSERVATIONS["neighbour_looking"])
+    return n, tram, neighbour
+
+
+def simulate(start_weight, days, n_sims, cookie_noise_sd, seed):
+    rng = np.random.default_rng(seed)
+    beta_mean, beta_sd, sigma_hat, n_obs = fit_gain_model()
+    n, tram_obs, neigh_obs = mood_counts()
+
+    # Parameter uncertainty: one draw per simulated world.
+    beta = rng.normal(beta_mean, beta_sd, n_sims)
+    # Scaled inverse-chi-square draw for the noise sigma.
+    sigma = sigma_hat * np.sqrt(n_obs / rng.chisquare(n_obs, n_sims))
+    p_tram = rng.beta(1 + tram_obs, 1 + n - tram_obs, n_sims)
+    p_neigh = rng.beta(1 + neigh_obs, 1 + n - neigh_obs, n_sims)
+
+    # Calibrate P(sunny & mild) so the average good-mood rate is 3/7 where possible.
+    target = GOOD_MOOD_DAYS_PER_WEEK / 7
+    with np.errstate(divide="ignore", invalid="ignore"):
+        p_sunny = 1 - (1 - target / p_tram) / p_neigh
+    p_sunny = np.clip(np.nan_to_num(p_sunny, nan=1.0), 0, 1)
+
+    weight = np.full(n_sims, start_weight)
+    visits_this_week = np.zeros(n_sims, dtype=int)
+    total_visits = np.zeros(n_sims, dtype=int)
+
+    for day in range(days):
+        if day % 7 == 0:
+            visits_this_week[:] = 0
+
+        tram_ok = rng.random(n_sims) < p_tram
+        sunny_mild = rng.random(n_sims) < p_sunny
+        neighbour = rng.random(n_sims) < p_neigh
+        likes = sunny_mild.astype(int) + tram_ok
+        dislikes = neighbour.astype(int) + ~tram_ok
+        good_mood = likes > dislikes
+
+        visit = good_mood & (visits_this_week < MAX_VISITS_PER_WEEK)
+        visits_this_week += visit
+        total_visits += visit
+
+        cookies = BASE_COOKIES_PER_DAY + GRANDMA_COOKIES * visit
+        cookies = np.clip(cookies + rng.normal(0, cookie_noise_sd, n_sims), 0, None)
+
+        gain = beta * cookies + rng.normal(0, sigma)
+        weight = weight + gain
+
+    return weight, total_visits, (beta_mean, beta_sd, sigma_hat)
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Predict Cookie Monster's birthday weight.")
+    parser.add_argument("--days", type=int, default=14, help="days until the birthday (default 14)")
+    parser.add_argument("--sims", type=int, default=100_000, help="number of Monte Carlo runs")
+    parser.add_argument("--cookie-noise", type=float, default=5.0, help="sd of daily cookie intake (kg)")
+    parser.add_argument("--seed", type=int, default=42)
+    args = parser.parse_args()
+
+    start = OBSERVATIONS["weight_end"][-1]
+    weights, visits, (b_mean, b_sd, sigma) = simulate(start, args.days, args.sims, args.cookie_noise, args.seed)
+
+    lo, med, hi = np.percentile(weights, [5, 50, 95])
+    print(f"Start weight (end of day {OBSERVATIONS['day'][-1]}): {start:.1f} kg")
+    print(f"Fitted gain rate: {b_mean:.3f} ± {b_sd:.3f} kg per kg of cookies (daily noise ~{sigma:.1f} kg)")
+    print(f"Grandma visits in {args.days} days: {visits.mean():.1f} on average")
+    print()
+    print(f"Predicted weight after {args.days} days:")
+    print(f"  mean   {weights.mean():.1f} kg")
+    print(f"  median {med:.1f} kg")
+    print(f"  90% interval {lo:.1f} – {hi:.1f} kg")
+    print()
+    print(f"For the postcard: ~{med:.0f} kg (an 'exact' number isn't possible under uncertainty)")
+
+
+if __name__ == "__main__":
+    main()
